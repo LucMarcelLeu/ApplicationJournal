@@ -32,7 +32,7 @@ ApplicationJournal was created as a practical alternative to maintaining a sprea
 The project is split into a frontend and a backend API:
 
 - `frontend/` — React application built with Vite and Material UI.
-- `ApplicationJournal.Api/` — ASP.NET Core Web API and application logic.
+- `backend/ApplicationJournal.Api/` — ASP.NET Core Web API and application logic.
 - PostgreSQL — stores application data.
 - Docker / nginx configuration — supports running the application in containers.
 
