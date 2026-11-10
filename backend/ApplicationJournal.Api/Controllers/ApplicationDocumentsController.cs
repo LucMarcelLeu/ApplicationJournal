@@ -209,6 +209,50 @@ public class ApplicationDocumentsController(
             document.OriginalFileName);
     }
 
+
+    [HttpGet("{documentId:int}/preview")]
+    public async Task<IActionResult> Preview(
+        int applicationId,
+        int documentId,
+        CancellationToken cancellationToken)
+    {
+        var document = await dbContext.ApplicationDocuments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                d => d.Id == documentId &&
+                     d.JobApplicationId == applicationId,
+                cancellationToken);
+
+        if (document is null)
+        {
+            return NotFound();
+        }
+
+        if (document.ContentType != "application/pdf")
+        {
+            return BadRequest(new
+            {
+                message = "Nur PDF-Dokumente können angezeigt werden."
+            });
+        }
+
+        var filePath = Path.Combine(
+            StoragePath,
+            document.StoredFileName);
+
+        if (!System.IO.File.Exists(filePath))
+        {
+            return NotFound(new
+            {
+                message = "Die gespeicherte Datei wurde nicht gefunden."
+            });
+        }
+
+        // Ohne Download-Dateinamen wird die PDF inline ausgeliefert.
+        return PhysicalFile(filePath, "application/pdf");
+    }
+
+
     [HttpDelete("{documentId:int}")]
     public async Task<IActionResult> DeleteDocument(
         int applicationId,
