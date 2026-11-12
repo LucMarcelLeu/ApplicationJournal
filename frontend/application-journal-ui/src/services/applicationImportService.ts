@@ -1,3 +1,4 @@
+import { apiFetch } from "./apiFetch";
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 export interface JobApplicationImportPreview {
@@ -33,7 +34,7 @@ export async function previewApplications(
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch(
+    const response = await apiFetch(
         `${API_URL}/applications/import/structured-preview`,
         {
             method: "POST",
@@ -56,7 +57,7 @@ export async function previewApplications(
 export async function saveImportedApplications(
     applications: JobApplicationImportPreview[],
 ): Promise<ApplicationImportSaveResponse> {
-    const response = await fetch(
+    const response = await apiFetch(
         `${API_URL}/applications/import/save`,
         {
             method: "POST",
