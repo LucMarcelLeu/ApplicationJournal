@@ -31,7 +31,8 @@ import {
 
 import {
   getDocuments,
-  getDocumentDownloadUrl,
+  downloadDocument,
+  getDocumentPreview,
   uploadDocument,
   deleteDocument
 } from "./services/documentService";
@@ -825,7 +826,26 @@ function App() {
           onDelete={(documentId, fileName) =>
             void handleDeleteDocument(documentId, fileName)
           }
-          getDownloadUrl={getDocumentDownloadUrl}
+          onDownload={(documentId) => {
+            if (documentsForApplication) {
+              void downloadDocument(
+                documentsForApplication.id,
+                documentId,
+              );
+            }
+          }}
+          onPreview={(documentId) => {
+            if (!documentsForApplication) {
+              return Promise.reject(
+                new Error("Keine Bewerbung ausgewählt."),
+              );
+            }
+
+            return getDocumentPreview(
+              documentsForApplication.id,
+              documentId,
+            );
+          }}
         />
 
         {/* Aktivitätenverwaltung */}

@@ -1,3 +1,4 @@
+import { apiFetch } from "./apiFetch";
 import type {
     JobApplication,
     CreateJobApplicationRequest,
@@ -6,7 +7,7 @@ import type {
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 export async function getApplications(): Promise<JobApplication[]> {
-    const response = await fetch(`${API_URL}/applications`);
+    const response = await apiFetch(`${API_URL}/applications`);
 
     if (!response.ok) {
         throw new Error("Bewerbungen konnten nicht geladen werden.");
@@ -18,7 +19,7 @@ export async function getApplications(): Promise<JobApplication[]> {
 export async function createApplication(
     request: CreateJobApplicationRequest,
 ): Promise<JobApplication> {
-    const response = await fetch(`${API_URL}/applications`, {
+    const response = await apiFetch(`${API_URL}/applications`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -37,7 +38,7 @@ export async function updateApplicationStatus(
     id: number,
     status: string,
 ): Promise<void> {
-    const response = await fetch(`${API_URL}/applications/${id}/status`, {
+    const response = await apiFetch(`${API_URL}/applications/${id}/status`, {
         method: "PATCH",
         headers: {
             "Content-Type": "application/json",
@@ -72,7 +73,7 @@ export async function updateApplication(
     id: number,
     request: UpdateJobApplicationRequest,
 ): Promise<void> {
-    const response = await fetch(`${API_URL}/applications/${id}`, {
+    const response = await apiFetch(`${API_URL}/applications/${id}`, {
         method: "PUT",
         headers: {
             "Content-Type": "application/json",

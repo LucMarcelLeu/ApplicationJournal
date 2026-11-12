@@ -1,4 +1,10 @@
-import { useState, type ChangeEvent, type RefObject } from "react";
+import {
+    useEffect,
+    useState,
+    type ChangeEvent,
+    type RefObject,
+} from "react";
+
 import {
     Alert,
     Box,
@@ -19,7 +25,9 @@ import {
     Tooltip,
     Typography,
 } from "@mui/material";
+
 import type { SelectChangeEvent } from "@mui/material";
+
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
@@ -42,7 +50,8 @@ interface ApplicationDocumentsDialogProps {
     onDocumentTypeChange: (value: string) => void;
     onUpload: (event: ChangeEvent<HTMLInputElement>) => void;
     onDelete: (documentId: number, fileName: string) => void;
-    getDownloadUrl: (applicationId: number, documentId: number) => string;
+    onDownload: (documentId: number) => void;
+    onPreview: (documentId: number) => Promise<string>;
 }
 
 export default function ApplicationDocumentsDialog({
@@ -59,12 +68,78 @@ export default function ApplicationDocumentsDialog({
     onDocumentTypeChange,
     onUpload,
     onDelete,
-    getDownloadUrl,
+    onDownload,
+    onPreview,
 }: ApplicationDocumentsDialogProps) {
-
     const [previewDocument, setPreviewDocument] =
         useState<ApplicationDocument | null>(null);
 
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewError, setPreviewError] = useState<string | null>(null);
+
+    // PDF-Vorschau laden und Blob-URL beim Wechsel freigeben.
+    useEffect(() => {
+        if (!previewDocument) {
+            setPreviewUrl((current) => {
+                if (current) URL.revokeObjectURL(current);
+                return null;
+            });
+            setPreviewError(null);
+            return;
+        }
+
+        let active = true;
+        let createdUrl: string | null = null;
+
+        setPreviewLoading(true);
+        setPreviewError(null);
+
+        if (!application) {
+            setPreviewError("Keine Bewerbung ausgewählt.");
+            setPreviewLoading(false);
+            return;
+        }
+
+        onPreview(previewDocument.id)
+            .then((url) => {
+                createdUrl = url;
+
+                if (active) {
+                    setPreviewUrl(url);
+                } else {
+                    URL.revokeObjectURL(url);
+                }
+            })
+            .catch((error: unknown) => {
+                if (active) {
+                    setPreviewError(
+                        error instanceof Error
+                            ? error.message
+                            : "PDF-Vorschau konnte nicht geladen werden.",
+                    );
+                }
+            })
+            .finally(() => {
+                if (active) {
+                    setPreviewLoading(false);
+                }
+            });
+
+        return () => {
+            active = false;
+
+            if (createdUrl) {
+                URL.revokeObjectURL(createdUrl);
+            }
+        };
+    }, [previewDocument, application, onPreview]);
+
+    const closePreview = () => {
+        setPreviewDocument(null);
+        setPreviewUrl(null);
+        setPreviewError(null);
+    };
 
     return (
         <>
@@ -131,12 +206,14 @@ export default function ApplicationDocumentsDialog({
                             disabled={uploading || loading}
                             onClick={() => fileInputRef.current?.click()}
                         >
-                            {uploading ? "Wird hochgeladen …" : "Dokument hochladen"}
+                            {uploading
+                                ? "Wird hochgeladen …"
+                                : "Dokument hochladen"}
                         </Button>
 
                         <Typography variant="caption" color="text.secondary">
-                            Erlaubt: PDF, Word, TXT, PNG und JPG. Maximale Dateigrösse:
-                            10 MB.
+                            Erlaubt: PDF, Word, TXT, PNG und JPG. Maximale
+                            Dateigrösse: 10 MB.
                         </Typography>
 
                         {loading ? (
@@ -183,11 +260,14 @@ export default function ApplicationDocumentsDialog({
                                                 >
                                                     {document.documentType}
                                                     {" · "}
-                                                    {(document.fileSize / (1024 * 1024)).toFixed(2)} MB
+                                                    {(
+                                                        document.fileSize /
+                                                        (1024 * 1024)
+                                                    ).toFixed(2)} MB
                                                     {" · "}
-                                                    {new Date(document.uploadedAt).toLocaleDateString(
-                                                        "de-CH",
-                                                    )}
+                                                    {new Date(
+                                                        document.uploadedAt,
+                                                    ).toLocaleDateString("de-CH")}
                                                 </Typography>
                                             </Box>
 
@@ -195,25 +275,25 @@ export default function ApplicationDocumentsDialog({
                                                 <span>
                                                     <IconButton
                                                         aria-label={`PDF ${document.originalFileName} anzeigen`}
-                                                        disabled={document.contentType !== "application/pdf"}
-                                                        onClick={() => setPreviewDocument(document)}
+                                                        disabled={
+                                                            document.contentType !==
+                                                            "application/pdf"
+                                                        }
+                                                        onClick={() =>
+                                                            setPreviewDocument(document)
+                                                        }
                                                     >
                                                         <VisibilityOutlinedIcon />
                                                     </IconButton>
                                                 </span>
                                             </Tooltip>
 
-                                            <Tooltip title="Dokument öffnen oder herunterladen">
+                                            <Tooltip title="Dokument herunterladen">
                                                 <IconButton
-                                                    component="a"
-                                                    href={
-                                                        application
-                                                            ? getDownloadUrl(application.id, document.id)
-                                                            : undefined
+                                                    aria-label={`Dokument ${document.originalFileName} herunterladen`}
+                                                    onClick={() =>
+                                                        onDownload(document.id)
                                                     }
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    aria-label="Dokument öffnen oder herunterladen"
                                                 >
                                                     <DownloadOutlinedIcon />
                                                 </IconButton>
@@ -225,7 +305,10 @@ export default function ApplicationDocumentsDialog({
                                                     aria-label={`Dokument ${document.originalFileName} löschen`}
                                                     disabled={uploading}
                                                     onClick={() =>
-                                                        onDelete(document.id, document.originalFileName)
+                                                        onDelete(
+                                                            document.id,
+                                                            document.originalFileName,
+                                                        )
                                                     }
                                                 >
                                                     <DeleteIcon />
@@ -246,9 +329,10 @@ export default function ApplicationDocumentsDialog({
                 </DialogActions>
             </Dialog>
 
+            {/* PDF-Vorschau */}
             <Dialog
                 open={previewDocument !== null}
-                onClose={() => setPreviewDocument(null)}
+                onClose={closePreview}
                 fullWidth
                 maxWidth="lg"
                 sx={{
@@ -271,14 +355,30 @@ export default function ApplicationDocumentsDialog({
                         overflow: "hidden",
                     }}
                 >
-                    {previewDocument && application && (
+                    {previewLoading && (
+                        <Box
+                            sx={{
+                                display: "flex",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                height: "100%",
+                            }}
+                        >
+                            <CircularProgress />
+                        </Box>
+                    )}
+
+                    {previewError && (
+                        <Alert severity="error" sx={{ m: 2 }}>
+                            {previewError}
+                        </Alert>
+                    )}
+
+                    {previewUrl && (
                         <Box
                             component="iframe"
-                            src={`${getDownloadUrl(
-                                application.id,
-                                previewDocument.id,
-                            ).replace(/\/download$/, "/preview")}#toolbar=1&navpanes=0`}
-                            title={previewDocument.originalFileName}
+                            src={`${previewUrl}#toolbar=1&navpanes=0`}
+                            title={previewDocument?.originalFileName}
                             sx={{
                                 width: "100%",
                                 height: "100%",
@@ -289,12 +389,11 @@ export default function ApplicationDocumentsDialog({
                 </DialogContent>
 
                 <DialogActions>
-                    <Button onClick={() => setPreviewDocument(null)}>
+                    <Button onClick={closePreview}>
                         Schliessen
                     </Button>
                 </DialogActions>
             </Dialog>
         </>
-
     );
 }

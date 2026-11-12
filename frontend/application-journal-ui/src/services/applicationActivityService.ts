@@ -1,4 +1,4 @@
-
+import { apiFetch } from "./apiFetch";
 import type {
     ApplicationActivity,
     CreateApplicationActivityRequest,
@@ -9,7 +9,7 @@ const API_URL = import.meta.env.VITE_API_BASE_URL;
 export async function getApplicationActivities(
     jobApplicationId: number,
 ): Promise<ApplicationActivity[]> {
-    const response = await fetch(
+    const response = await apiFetch(
         `${API_URL}/applications/${jobApplicationId}/activities`,
     );
 
@@ -24,7 +24,7 @@ export async function createApplicationActivity(
     jobApplicationId: number,
     request: CreateApplicationActivityRequest,
 ): Promise<ApplicationActivity> {
-    const response = await fetch(
+    const response = await apiFetch(
         `${API_URL}/applications/${jobApplicationId}/activities`,
         {
             method: "POST",
@@ -51,7 +51,7 @@ export async function completeApplicationActivity(
     jobApplicationId: number,
     activityId: number,
 ): Promise<void> {
-    const response = await fetch(
+    const response = await apiFetch(
         `${API_URL}/applications/${jobApplicationId}/activities/${activityId}/complete`,
         {
             method: "PATCH",
@@ -84,7 +84,7 @@ export interface OpenApplicationActivity {
 export async function getOpenApplicationActivities(): Promise<
     OpenApplicationActivity[]
 > {
-    const response = await fetch(`${API_URL}/activities/open`);
+    const response = await apiFetch(`${API_URL}/activities/open`);
 
     if (!response.ok) {
         throw new Error("Offene Aufgaben konnten nicht geladen werden.");
